@@ -1,4 +1,4 @@
-# 🌍 멀티플레이어 게임 (WebSocket + Go)
+[# 🌍 멀티플레이어 게임 (WebSocket + Go)](https://091fade1-0690-450b-b3df-190846ae454a-00-3f0nzfnz89tij.pike.replit.dev/)
 
 실시간 멀티플레이어 게임을 WebSocket과 Go로 구현한 프로젝트입니다. 서버 authoritative physics를 사용하여 안정적이고 동기화된 게임 경험을 제공합니다.
 
