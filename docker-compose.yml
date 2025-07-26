@@ -1,0 +1,56 @@
+# 🐳 멀티플레이어 게임 Docker Compose
+services:
+  # 🎮 게임 서버
+  game-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: multiplayer-game
+    ports:
+      - "3000:3000"
+    environment:
+      - GIN_MODE=release
+      - PORT=3000
+    volumes:
+      # 개발 시 소스 코드 마운트 (선택사항)
+      # - .:/app
+      # 로그 디렉토리 마운트
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - game-network
+
+  # 🔍 모니터링 (선택사항)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: game-nginx
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf
+  #   depends_on:
+  #     - game-server
+  #   networks:
+  #     - game-network
+
+networks:
+  game-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local

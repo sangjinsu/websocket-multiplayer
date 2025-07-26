@@ -1,0 +1,59 @@
+# 🐳 Docker 빌드 제외 파일 목록
+
+# Git 관련
+.git
+.gitignore
+.gitattributes
+
+# 문서 및 설명서
+README.md
+docs/
+*.md
+
+# Docker 관련
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# 개발 도구
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 로그 파일
+*.log
+logs/
+
+# 임시 파일
+tmp/
+temp/
+.tmp/
+
+# OS 생성 파일
+.DS_Store
+Thumbs.db
+
+# 테스트 파일
+*_test.go
+test/
+tests/
+
+# 빌드 아티팩트
+bin/
+dist/
+build/
+
+# 의존성 캐시
+vendor/
+node_modules/
+
+# 환경 설정 파일
+.env
+.env.local
+.env.*.local
+
+# 백업 파일
+*.bak
+*.backup 

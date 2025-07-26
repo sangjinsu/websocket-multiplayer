@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>멀티플레이어 게임</title>
+    <!-- Matter.js CDN 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        background: linear-gradient(
+          135deg,
+          #667eea 0%,
+          #764ba2 50%,
+          #f093fb 100%
+        );
+        color: white;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .game-info {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 25px;
+        border-radius: 20px;
+        margin-bottom: 25px;
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+
+      .game-info h1 {
+        margin: 0 0 15px 0;
+        text-align: center;
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(45deg, #fff, #f0f0f0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .status {
+        text-align: center;
+        margin-bottom: 15px;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+
+      .player-count {
+        text-align: center;
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .player-list {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+      }
+
+      .player-list::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .player-list::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+      }
+
+      .player-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 3px;
+      }
+
+      .player-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .player-item {
+        display: flex;
+        align-items: center;
+        margin: 8px 0;
+        padding: 12px 15px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateZ(0);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .player-item::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.1),
+          transparent
+        );
+        transition: left 0.5s;
+      }
+
+      .player-item:hover::before {
+        left: 100%;
+      }
+
+      .player-item:hover {
+        transform: translateY(-3px) translateZ(10px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.18);
+        border-color: rgba(255, 255, 255, 0.25);
+      }
+
+      .player-color {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        margin-right: 12px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .player-color::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        pointer-events: none;
+      }
+
+      .player-info {
+        flex: 1;
+        font-size: 14px;
+      }
+
+      .player-name {
+        font-weight: 600;
+        font-size: 15px;
+        margin-bottom: 2px;
+        color: rgba(255, 255, 255, 0.95);
+      }
+
+      .player-time {
+        font-size: 12px;
+        opacity: 0.75;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .current-player {
+        background: rgba(255, 255, 255, 0.25) !important;
+        border: 2px solid rgba(255, 255, 255, 0.6) !important;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.2) !important;
+      }
+
+      .current-player .player-name {
+        color: #fff;
+        font-weight: 700;
+      }
+
+      /* Login Screen Styles */
+      .login-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          135deg,
+          #667eea 0%,
+          #764ba2 50%,
+          #f093fb 100%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: gradientShift 10s ease infinite;
+      }
+
+      @keyframes gradientShift {
+        0%,
+        100% {
+          background: linear-gradient(
+            135deg,
+            #667eea 0%,
+            #764ba2 50%,
+            #f093fb 100%
+          );
+        }
+        50% {
+          background: linear-gradient(
+            135deg,
+            #764ba2 0%,
+            #f093fb 50%,
+            #667eea 100%
+          );
+        }
+      }
+
+      .login-container {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 50px;
+        border-radius: 25px;
+        backdrop-filter: blur(25px);
+        text-align: center;
+        min-width: 450px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        transform: translateY(0);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .login-container::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.1) 0%,
+          transparent 70%
+        );
+        animation: rotate 20s linear infinite;
+        pointer-events: none;
+      }
+
+      @keyframes rotate {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .login-container:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+      }
+
+      .login-container h1 {
+        margin: 0 0 40px 0;
+        color: white;
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(45deg, #fff, #f0f0f0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        position: relative;
+        z-index: 1;
+      }
+
+      .login-form {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        text-align: left;
+      }
+
+      .input-group label {
+        color: white;
+        font-weight: 600;
+        font-size: 15px;
+        margin-left: 5px;
+      }
+
+      .input-group input {
+        padding: 15px 20px;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        font-size: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+        font-family: inherit;
+      }
+
+      .input-group input::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .input-group input:focus {
+        outline: none;
+        border-color: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.15);
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+      }
+
+      .login-btn {
+        padding: 16px 32px;
+        background: linear-gradient(45deg, #4caf50, #45a049);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        font-family: inherit;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .login-btn::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.2),
+          transparent
+        );
+        transition: left 0.5s;
+      }
+
+      .login-btn:hover::before {
+        left: 100%;
+      }
+
+      .login-btn:hover {
+        background: linear-gradient(45deg, #45a049, #4caf50);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(76, 175, 80, 0.3);
+      }
+
+      .login-btn:active {
+        transform: translateY(0);
+      }
+
+      .login-btn:disabled {
+        background: linear-gradient(45deg, #ccc, #bbb);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .login-info {
+        margin-top: 30px;
+        text-align: left;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 14px;
+        position: relative;
+        z-index: 1;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .login-info p {
+        margin: 8px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .login-info p::before {
+        content: "•";
+        color: #4caf50;
+        font-weight: bold;
+      }
+
+      .logout-btn {
+        padding: 12px 24px;
+        background: linear-gradient(45deg, #f44336, #d32f2f);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 15px;
+        transition: all 0.3s ease;
+        font-family: inherit;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .logout-btn::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.2),
+          transparent
+        );
+        transition: left 0.5s;
+      }
+
+      .logout-btn:hover::before {
+        left: 100%;
+      }
+
+      .logout-btn:hover {
+        background: linear-gradient(45deg, #d32f2f, #f44336);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(244, 67, 54, 0.3);
+      }
+
+      .logout-btn:active {
+        transform: translateY(0);
+      }
+
+      /* Game Layout */
+      .game-layout {
+        display: flex;
+        justify-content: center;
+        margin: 25px 0;
+      }
+
+      #gameCanvas {
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        display: block;
+        margin: 0 auto;
+        cursor: crosshair;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        transform: perspective(1000px) rotateX(5deg);
+        transition: transform 0.3s ease;
+      }
+
+      #gameCanvas:hover {
+        transform: perspective(1000px) rotateX(2deg);
+      }
+
+      .connection-status {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        padding: 12px 20px;
+        border-radius: 30px;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 1000;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+
+      .connected {
+        background: rgba(76, 175, 80, 0.9);
+        color: white;
+        animation: none;
+      }
+
+      .disconnected {
+        background: rgba(244, 67, 54, 0.9);
+        color: white;
+      }
+
+      .connection-status::before {
+        content: "●";
+        margin-right: 8px;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+      <div class="login-container">
+        <h1>🌍 멀티플레이어 게임</h1>
+        <div class="login-form">
+          <div class="input-group">
+            <label for="playerId">플레이어 ID:</label>
+            <input
+              type="text"
+              id="playerId"
+              placeholder="아이디를 입력하세요"
+              maxlength="20"
+            />
+          </div>
+          <button id="loginBtn" class="login-btn">게임 시작</button>
+          <div class="login-info">
+            <p>• 기존 ID로 로그인하면 이전 정보가 복원됩니다</p>
+            <p>• 새로운 ID로 로그인하면 새로운 플레이어가 생성됩니다</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="game-screen" style="display: none">
+      <div class="container">
+        <div class="game-info">
+          <h1>🌍 멀티플레이어 게임</h1>
+          <div class="status" id="status">연결 중...</div>
+          <div class="player-count" id="playerCount">플레이어: 0명</div>
+          <div class="player-list" id="playerList"></div>
+          <div class="controls">
+            <p>🎮 <strong>조작법:</strong></p>
+            <p>WASD 키로 이동</p>
+            <p>다른 플레이어들과 함께 게임을 즐겨보세요!</p>
+          </div>
+          <button id="logoutBtn" class="logout-btn">로그아웃</button>
+        </div>
+
+        <div class="game-layout">
+          <canvas id="gameCanvas" width="800" height="600"></canvas>
+        </div>
+
+        <div class="connection-status" id="connectionStatus">
+          <span class="disconnected">● 연결 끊김</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Message types (should match server enum)
+      const MessageType = {
+        WELCOME: "welcome",
+        GAME_STATE: "game_state",
+        PLAYER_JOIN: "player_join",
+        PLAYER_LEAVE: "player_leave",
+        PLAYER_MOVE: "player_move",
+        MOVE: "move",
+        RECONNECT: "reconnect",
+        LOGIN: "login",
+        COLLISION: "collision",
+      };
+
+      class MultiplayerGame {
+        constructor() {
+          this.canvas = document.getElementById("gameCanvas");
+          this.ctx = this.canvas.getContext("2d");
+          this.socket = null;
+          this.players = {}; // {id: {x, y, color, name, ...}}
+          this.myId = null;
+          this.myColor = null;
+          this.playerName = null;
+          this.isConnected = false;
+          this.isLoggedIn = false;
+
+          this.setupLoginEventListeners();
+          this.checkExistingLogin();
+          this.setupInput();
+        }
+
+        setupInput() {
+          document.addEventListener("keydown", (e) => {
+            if (!this.isConnected || !this.isLoggedIn) return;
+            const key = e.key.toLowerCase();
+            if (["w", "a", "s", "d"].includes(key)) {
+              this.socket.send(
+                JSON.stringify({
+                  type: "input",
+                  payload: { key, pressed: true },
+                })
+              );
+            }
+          });
+        }
+
+        render() {
+          // Clear canvas
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+          // Draw 3D background gradient
+          const gradient = this.ctx.createLinearGradient(
+            0,
+            0,
+            0,
+            this.canvas.height
+          );
+          gradient.addColorStop(0, "rgba(102, 126, 234, 0.1)");
+          gradient.addColorStop(0.5, "rgba(118, 75, 162, 0.1)");
+          gradient.addColorStop(1, "rgba(0, 0, 0, 0.2)");
+
+          this.ctx.fillStyle = gradient;
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+          // Draw 3D grid with perspective
+          this.ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+          this.ctx.lineWidth = 1;
+
+          for (let x = 0; x < this.canvas.width; x += 50) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.canvas.height);
+            this.ctx.stroke();
+          }
+
+          for (let y = 0; y < this.canvas.height; y += 50) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.canvas.width, y);
+            this.ctx.stroke();
+          }
+
+          // Draw 3D floor effect
+          this.ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+          this.ctx.fillRect(0, this.canvas.height - 20, this.canvas.width, 20);
+
+          // Draw all players
+          Object.values(this.players).forEach((player) => {
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(player.x, player.y, 15, 0, Math.PI * 2);
+            this.ctx.fillStyle = player.color || "#fff";
+            this.ctx.fill();
+            this.ctx.strokeStyle = "#222";
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+            this.ctx.fillStyle = "#fff";
+            this.ctx.font = "bold 12px Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.fillText(
+              player.name || player.id,
+              player.x,
+              player.y + 30
+            );
+            this.ctx.restore();
+          });
+        }
+
+        // Check if user is already logged in
+        checkExistingLogin() {
+          const savedPlayerName = localStorage.getItem("playerName");
+          if (savedPlayerName) {
+            document.getElementById("playerId").value = savedPlayerName;
+          }
+        }
+
+        // Setup login event listeners
+        setupLoginEventListeners() {
+          const loginBtn = document.getElementById("loginBtn");
+          const playerIdInput = document.getElementById("playerId");
+          const logoutBtn = document.getElementById("logoutBtn");
+
+          // Login button click
+          loginBtn.addEventListener("click", () => {
+            this.login();
+          });
+
+          // Enter key in input
+          playerIdInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+              this.login();
+            }
+          });
+
+          // Logout button click
+          logoutBtn.addEventListener("click", () => {
+            this.logout();
+          });
+        }
+
+        // Login function
+        login() {
+          const playerIdInput = document.getElementById("playerId");
+          const playerName = playerIdInput.value.trim();
+
+          if (!playerName) {
+            alert("아이디를 입력해주세요!");
+            return;
+          }
+
+          if (playerName.length < 2) {
+            alert("아이디는 2자 이상이어야 합니다!");
+            return;
+          }
+
+          // Save player name
+          this.playerName = playerName;
+          localStorage.setItem("playerName", playerName);
+
+          // Show game screen
+          document.getElementById("loginScreen").style.display = "none";
+          document.getElementById("gameScreen").style.display = "block";
+
+          // Setup game event listeners and connect
+          this.setupEventListeners();
+          this.connect();
+        }
+
+        // Logout function
+        logout() {
+          if (this.socket) {
+            this.socket.close();
+          }
+
+          // Clear game state
+          this.players = {};
+          this.myId = null;
+          this.myColor = null;
+          this.isConnected = false;
+          this.isLoggedIn = false;
+
+          // Show login screen
+          document.getElementById("gameScreen").style.display = "none";
+          document.getElementById("loginScreen").style.display = "flex";
+
+          // Clear input
+          document.getElementById("playerId").value = "";
+
+          // Update UI
+          this.updateStatus("로그아웃되었습니다.");
+          this.updatePlayerCount();
+        }
+
+        // Load player data from localStorage
+        loadPlayerData() {
+          const playerName = localStorage.getItem("playerName");
+          if (playerName) {
+            return {
+              name: playerName,
+              color: localStorage.getItem("playerColor"),
+              lastPosition: JSON.parse(
+                localStorage.getItem("lastPosition") || "null"
+              ),
+            };
+          }
+          return null;
+        }
+
+        // Save player data to localStorage
+        savePlayerData() {
+          if (this.myColor) {
+            localStorage.setItem("playerColor", this.myColor);
+          }
+          if (this.players[this.myId]) {
+            const pos = {
+              x: this.players[this.myId].x,
+              y: this.players[this.myId].y,
+            };
+            localStorage.setItem("lastPosition", JSON.stringify(pos));
+          }
+        }
+
+        setupEventListeners() {
+          console.log("Setting up event listeners");
+
+          // Mouse click to move
+          this.canvas.addEventListener("click", (e) => {
+            console.log("Canvas clicked");
+            if (!this.isConnected) {
+              console.log("Not connected");
+              return;
+            }
+
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            console.log(`Mouse click at: ${x}, ${y}`);
+          });
+        }
+
+        connect() {
+          const protocol =
+            window.location.protocol === "https:" ? "wss:" : "ws:";
+          const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+          this.socket = new WebSocket(wsUrl);
+
+          this.socket.onopen = () => {
+            this.isConnected = true;
+            this.updateStatus("연결됨! 게임을 시작하세요.");
+            this.updateConnectionStatus(true);
+
+            // Send player login info
+            const playerData = this.loadPlayerData();
+            const loginMessage = {
+              type: "login",
+              payload: {
+                name: this.playerName,
+                color: playerData?.color,
+                lastPosition: playerData?.lastPosition,
+              },
+            };
+
+            this.socket.send(JSON.stringify(loginMessage));
+          };
+
+          this.socket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            this.handleMessage(message);
+          };
+
+          this.socket.onclose = () => {
+            this.isConnected = false;
+            this.updateStatus("연결이 끊어졌습니다. 재연결 중...");
+            this.updateConnectionStatus(false);
+
+            // Try to reconnect after 3 seconds
+            setTimeout(() => {
+              if (!this.isConnected) {
+                this.connect();
+              }
+            }, 3000);
+          };
+
+          this.socket.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            this.updateStatus("연결 오류가 발생했습니다.");
+          };
+        }
+
+        // 서버에서 받은 game_state로 플레이어 상태 갱신
+        handleMessage(message) {
+          switch (message.type) {
+            case MessageType.WELCOME:
+              this.myId = message.payload.id;
+              this.myColor = message.payload.color;
+              this.isLoggedIn = true;
+              this.savePlayerData();
+              this.updateStatus(
+                `환영합니다! ${message.payload.name} (ID: ${this.myId})`
+              );
+              break;
+            case MessageType.GAME_STATE:
+              this.players = message.payload;
+              this.render();
+              this.updatePlayerCount();
+              break;
+            case MessageType.PLAYER_JOIN:
+              this.players[message.payload.id] = {
+                id: message.payload.id,
+                playerNum: message.payload.playerNum,
+                name: message.payload.name,
+                x: message.payload.x || Math.random() * this.canvas.width,
+                y: message.payload.y || Math.random() * this.canvas.height,
+                color: message.payload.color,
+              };
+              this.updatePlayerCount();
+              this.render();
+              break;
+            case MessageType.PLAYER_LEAVE:
+              delete this.players[message.payload.id];
+              this.updatePlayerCount();
+              this.render();
+              break;
+            case MessageType.PLAYER_MOVE:
+              if (this.players[message.payload.id]) {
+                this.players[message.payload.id].x = message.payload.x;
+                this.players[message.payload.id].y = message.payload.y;
+              }
+              this.render();
+              break;
+          }
+        }
+
+        updateStatus(message) {
+          document.getElementById("status").textContent = message;
+        }
+
+        updatePlayerCount() {
+          const count = Object.keys(this.players).length;
+          document.getElementById(
+            "playerCount"
+          ).textContent = `플레이어: ${count}명`;
+          this.updatePlayerList();
+        }
+
+        updatePlayerList() {
+          const playerListElement = document.getElementById("playerList");
+          const players = Object.values(this.players).sort(
+            (a, b) => (a.playerNum || 0) - (b.playerNum || 0)
+          );
+
+          if (players.length === 0) {
+            playerListElement.innerHTML =
+              '<p style="text-align: center; opacity: 0.7;">플레이어가 없습니다</p>';
+            return;
+          }
+
+          const playerListHTML = players
+            .map((player) => {
+              const isMe = player.id === this.myId;
+              const joinTime = player.joinedAt
+                ? new Date(player.joinedAt).toLocaleTimeString()
+                : "알 수 없음";
+
+              return `
+              <div class="player-item ${isMe ? "current-player" : ""}">
+                <div class="player-color" style="background-color: ${
+                  player.color
+                };"></div>
+                <div class="player-info">
+                  <div class="player-name">${
+                    player.name || `Player ${player.playerNum}`
+                  } ${isMe ? "(나)" : ""}</div>
+                  <div class="player-time">ID: ${
+                    player.id
+                  } • 접속: ${joinTime}</div>
+                </div>
+              </div>
+            `;
+            })
+            .join("");
+
+          playerListElement.innerHTML = playerListHTML;
+        }
+
+        updateConnectionStatus(connected) {
+          const statusElement = document.getElementById("connectionStatus");
+          if (connected) {
+            statusElement.innerHTML = '<span class="connected">● 연결됨</span>';
+          } else {
+            statusElement.innerHTML =
+              '<span class="disconnected">● 연결 끊김</span>';
+          }
+        }
+
+        gameLoop() {
+          requestAnimationFrame(() => this.gameLoop());
+        }
+
+        start() {
+          this.gameLoop();
+        }
+      }
+
+      // Start the game when page loads
+      window.addEventListener("load", () => {
+        const game = new MultiplayerGame();
+        game.start();
+      });
+    </script>
+  </body>
+</html>
