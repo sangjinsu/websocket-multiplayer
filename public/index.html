@@ -658,6 +658,11 @@
         .mobile-controls {
           display: block;
         }
+
+        /* 모바일에서 캔버스 커서 변경 */
+        #gameCanvas {
+          cursor: default;
+        }
       }
 
       /* 모바일 전용 텍스트 */
@@ -724,7 +729,7 @@
           <div class="controls">
             <p>🎮 <strong>조작법:</strong></p>
             <p>WASD 키로 이동</p>
-            <p>마우스 클릭 또는 터치로 이동</p>
+            <p>마우스 클릭으로 이동 (데스크톱)</p>
             <p class="mobile-only">📱 모바일: 화면 하단의 방향키 사용</p>
             <p>다른 플레이어들과 함께 게임을 즐겨보세요!</p>
           </div>
@@ -987,24 +992,16 @@
         setupEventListeners() {
           console.log("Setting up event listeners");
 
-          // Mouse click to move
+          // Mouse click to move (desktop only)
           this.canvas.addEventListener("click", (e) => {
-            this.handleCanvasClick(e);
-          });
-
-          // Touch events for mobile
-          this.canvas.addEventListener("touchstart", (e) => {
-            e.preventDefault(); // Prevent default touch behavior
-            this.handleCanvasTouch(e);
+            // Only handle clicks on desktop (not touch devices)
+            if (!("ontouchstart" in window)) {
+              this.handleCanvasClick(e);
+            }
           });
 
           // Prevent context menu on long press
           this.canvas.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-          });
-
-          // Prevent zoom on double tap
-          this.canvas.addEventListener("touchend", (e) => {
             e.preventDefault();
           });
 
@@ -1078,7 +1075,7 @@
           }
         }
 
-        // Handle canvas click/touch
+        // Handle canvas click (desktop only)
         handleCanvasClick(e) {
           console.log("Canvas clicked");
           if (!this.isConnected || !this.isLoggedIn) {
@@ -1091,23 +1088,6 @@
           const y = e.clientY - rect.top;
 
           console.log(`Click at: ${x}, ${y}`);
-          this.moveToPosition(x, y);
-        }
-
-        // Handle canvas touch
-        handleCanvasTouch(e) {
-          console.log("Canvas touched");
-          if (!this.isConnected || !this.isLoggedIn) {
-            console.log("Not connected or not logged in");
-            return;
-          }
-
-          const rect = this.canvas.getBoundingClientRect();
-          const touch = e.touches[0];
-          const x = touch.clientX - rect.left;
-          const y = touch.clientY - rect.top;
-
-          console.log(`Touch at: ${x}, ${y}`);
           this.moveToPosition(x, y);
         }
 
