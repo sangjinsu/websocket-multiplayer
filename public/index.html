@@ -700,6 +700,10 @@
           const savedPlayerName = localStorage.getItem("playerName");
           if (savedPlayerName) {
             document.getElementById("playerId").value = savedPlayerName;
+            // Show a message that previous login data exists
+            this.updateStatus(
+              "이전 로그인 정보가 있습니다. 로그인 버튼을 클릭하세요."
+            );
           }
         }
 
@@ -767,6 +771,11 @@
           this.myColor = null;
           this.isConnected = false;
           this.isLoggedIn = false;
+
+          // Clear localStorage data
+          localStorage.removeItem("playerName");
+          localStorage.removeItem("playerColor");
+          localStorage.removeItem("lastPosition");
 
           // Show login screen
           document.getElementById("gameScreen").style.display = "none";
@@ -864,9 +873,9 @@
             this.updateStatus("연결이 끊어졌습니다. 재연결 중...");
             this.updateConnectionStatus(false);
 
-            // Try to reconnect after 3 seconds
+            // Only reconnect if user is still logged in
             setTimeout(() => {
-              if (!this.isConnected) {
+              if (!this.isConnected && this.isLoggedIn) {
                 this.connect();
               }
             }, 3000);
