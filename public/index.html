@@ -857,11 +857,7 @@
             this.ctx.fillStyle = "#fff";
             this.ctx.font = "bold 12px Arial";
             this.ctx.textAlign = "center";
-            this.ctx.fillText(
-              player.name || player.id,
-              player.x,
-              player.y + 30
-            );
+            this.ctx.fillText(player.name, player.x, player.y + 30);
             this.ctx.restore();
           });
         }
@@ -1264,9 +1260,9 @@
                   player.color
                 };"></div>
                 <div class="player-info">
-                  <div class="player-name">${
-                    player.name || `Player ${player.playerNum}`
-                  } ${isMe ? "(나)" : ""}</div>
+                  <div class="player-name">${player.name} ${
+                isMe ? "(나)" : ""
+              }</div>
                   <div class="player-time">ID: ${
                     player.id
                   } • 접속: ${joinTime}</div>

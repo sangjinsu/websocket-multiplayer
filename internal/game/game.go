@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"sort"
@@ -86,10 +85,8 @@ func (g *Game) AddPlayer(player *models.Player) {
 	g.State.PlayerCount++
 	player.PlayerNum = g.State.PlayerCount
 	
-	// Use custom name if provided, otherwise use default
-	if player.Name == "" {
-		player.Name = fmt.Sprintf("Player %d", player.PlayerNum)
-	}
+	// Keep the original name as provided by the user
+	// Don't override with default names
 	
 	player.JoinedAt = time.Now()
 	player.LastSeen = time.Now()
@@ -128,11 +125,11 @@ func (g *Game) reorderPlayers() {
 		return players[i].joinedAt.Before(players[j].joinedAt)
 	})
 	
-	// Reassign player numbers
+	// Reassign player numbers only (keep original names)
 	for i, playerInfo := range players {
 		if player, exists := g.State.Players[playerInfo.id]; exists {
 			player.PlayerNum = i + 1
-			player.Name = fmt.Sprintf("Player %d", player.PlayerNum)
+			// Keep the original name, don't change it
 		}
 	}
 	

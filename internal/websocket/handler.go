@@ -101,6 +101,9 @@ func (h *Handler) handleMessage(player *models.Player, message models.Message) {
 			
 			// Set player properties
 			player.Name = name
+			if player.Name == "" {
+				player.Name = player.ID // Use ID if name is empty
+			}
 			if color != "" {
 				player.Color = color
 			} else {
