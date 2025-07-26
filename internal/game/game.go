@@ -170,6 +170,34 @@ func (g *Game) ApplyInput(playerID, key string) {
 	}
 }
 
+// ApplyVelocityInput: 터치/클릭 이동을 위한 속도 직접 적용
+func (g *Game) ApplyVelocityInput(playerID string, vx, vy float64) {
+	g.State.Mu.Lock()
+	defer g.State.Mu.Unlock()
+	p, ok := g.State.Players[playerID]
+	if !ok {
+		return
+	}
+	
+	// 기존 속도에 새로운 속도 추가 (부드러운 이동을 위해)
+	const blendFactor = 0.3 // 기존 속도와 새로운 속도의 혼합 비율
+	p.Vx = p.Vx*(1-blendFactor) + vx*blendFactor
+	p.Vy = p.Vy*(1-blendFactor) + vy*blendFactor
+	
+	// 속도 제한 (너무 빠르지 않도록)
+	const maxSpeed = 8.0
+	if p.Vx > maxSpeed {
+		p.Vx = maxSpeed
+	} else if p.Vx < -maxSpeed {
+		p.Vx = -maxSpeed
+	}
+	if p.Vy > maxSpeed {
+		p.Vy = maxSpeed
+	} else if p.Vy < -maxSpeed {
+		p.Vy = -maxSpeed
+	}
+}
+
 // Tick: 모든 플레이어의 위치/속도/충돌/반동 등 물리 연산 수행
 func (g *Game) Tick() {
 	g.State.Mu.Lock()

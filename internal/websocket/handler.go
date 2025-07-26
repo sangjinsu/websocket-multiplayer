@@ -146,9 +146,17 @@ func (h *Handler) handleMessage(player *models.Player, message models.Message) {
 		
 	case models.MessageTypeInput:
 		if payload, ok := message.Payload.(map[string]any); ok {
-			key, _ := payload["key"].(string)
-			// pressed := payload["pressed"].(bool) // 현재는 pressed true만 사용
-			h.game.ApplyInput(player.ID, key)
+			// Handle WASD input
+			if key, ok := payload["key"].(string); ok {
+				h.game.ApplyInput(player.ID, key)
+			}
+			
+			// Handle touch/click movement input
+			if vx, ok := payload["vx"].(float64); ok {
+				if vy, ok := payload["vy"].(float64); ok {
+					h.game.ApplyVelocityInput(player.ID, vx, vy)
+				}
+			}
 		}
 		return
 		

@@ -27,6 +27,14 @@
         color: white;
         min-height: 100vh;
         overflow-x: hidden;
+        /* 모바일 터치 최적화 */
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        touch-action: manipulation;
       }
 
       .container {
@@ -487,10 +495,27 @@
           inset 0 1px 0 rgba(255, 255, 255, 0.1);
         transform: perspective(1000px) rotateX(5deg);
         transition: transform 0.3s ease;
+        /* 모바일 터치 최적화 */
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        touch-action: manipulation;
+        /* 모바일에서 더 나은 터치 반응 */
+        -webkit-tap-highlight-color: transparent;
       }
 
       #gameCanvas:hover {
         transform: perspective(1000px) rotateX(2deg);
+      }
+
+      /* 모바일에서 호버 효과 비활성화 */
+      @media (hover: none) and (pointer: coarse) {
+        #gameCanvas:hover {
+          transform: perspective(1000px) rotateX(5deg);
+        }
       }
 
       .connection-status {
@@ -535,6 +560,66 @@
         margin-right: 8px;
         font-size: 16px;
       }
+
+      /* 모바일 최적화 */
+      @media (max-width: 768px) {
+        .container {
+          padding: 10px;
+        }
+
+        .game-info h1 {
+          font-size: 1.8rem;
+        }
+
+        .status {
+          font-size: 1rem;
+        }
+
+        .player-count {
+          font-size: 1rem;
+        }
+
+        #gameCanvas {
+          max-width: 100%;
+          height: auto;
+          transform: none;
+        }
+
+        .login-container {
+          padding: 20px;
+        }
+
+        .login-container h1 {
+          font-size: 1.8rem;
+        }
+
+        .input-group input {
+          font-size: 16px; /* iOS에서 줌 방지 */
+        }
+
+        .login-btn {
+          font-size: 16px;
+          padding: 15px 30px;
+        }
+      }
+
+      /* 터치 디바이스 최적화 */
+      @media (hover: none) and (pointer: coarse) {
+        .game-info {
+          padding: 20px;
+        }
+
+        .player-list {
+          max-height: 150px;
+        }
+
+        .connection-status {
+          bottom: 15px;
+          right: 15px;
+          padding: 10px 15px;
+          font-size: 12px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -572,6 +657,7 @@
           <div class="controls">
             <p>🎮 <strong>조작법:</strong></p>
             <p>WASD 키로 이동</p>
+            <p>마우스 클릭 또는 터치로 이동</p>
             <p>다른 플레이어들과 함께 게임을 즐겨보세요!</p>
           </div>
           <button id="logoutBtn" class="logout-btn">로그아웃</button>
@@ -823,18 +909,99 @@
 
           // Mouse click to move
           this.canvas.addEventListener("click", (e) => {
-            console.log("Canvas clicked");
-            if (!this.isConnected) {
-              console.log("Not connected");
-              return;
-            }
-
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            console.log(`Mouse click at: ${x}, ${y}`);
+            this.handleCanvasClick(e);
           });
+
+          // Touch events for mobile
+          this.canvas.addEventListener("touchstart", (e) => {
+            e.preventDefault(); // Prevent default touch behavior
+            this.handleCanvasTouch(e);
+          });
+
+          // Prevent context menu on long press
+          this.canvas.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+          });
+
+          // Prevent zoom on double tap
+          this.canvas.addEventListener("touchend", (e) => {
+            e.preventDefault();
+          });
+        }
+
+        // Handle canvas click/touch
+        handleCanvasClick(e) {
+          console.log("Canvas clicked");
+          if (!this.isConnected || !this.isLoggedIn) {
+            console.log("Not connected or not logged in");
+            return;
+          }
+
+          const rect = this.canvas.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+
+          console.log(`Click at: ${x}, ${y}`);
+          this.moveToPosition(x, y);
+        }
+
+        // Handle canvas touch
+        handleCanvasTouch(e) {
+          console.log("Canvas touched");
+          if (!this.isConnected || !this.isLoggedIn) {
+            console.log("Not connected or not logged in");
+            return;
+          }
+
+          const rect = this.canvas.getBoundingClientRect();
+          const touch = e.touches[0];
+          const x = touch.clientX - rect.left;
+          const y = touch.clientY - rect.top;
+
+          console.log(`Touch at: ${x}, ${y}`);
+          this.moveToPosition(x, y);
+        }
+
+        // Move player to specific position
+        moveToPosition(targetX, targetY) {
+          if (!this.myId || !this.players[this.myId]) {
+            return;
+          }
+
+          const player = this.players[this.myId];
+          const currentX = player.x;
+          const currentY = player.y;
+
+          // Calculate direction vector
+          const dx = targetX - currentX;
+          const dy = targetY - currentY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance > 0) {
+            // Normalize direction vector
+            const dirX = dx / distance;
+            const dirY = dy / distance;
+
+            // Send movement input to server
+            const speed = 5.0; // Movement speed
+            this.sendMovementInput(dirX * speed, dirY * speed);
+          }
+        }
+
+        // Send movement input to server
+        sendMovementInput(vx, vy) {
+          if (this.socket && this.isConnected) {
+            // Send velocity-based movement
+            const message = {
+              type: "input",
+              payload: {
+                vx: vx,
+                vy: vy,
+                timestamp: Date.now(),
+              },
+            };
+            this.socket.send(JSON.stringify(message));
+          }
         }
 
         connect() {
